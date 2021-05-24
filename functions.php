@@ -1,3 +1,4 @@
+<?php
 // add this to your themes/functions.php file
 
 add_filter('request', function( $vars ) { 
