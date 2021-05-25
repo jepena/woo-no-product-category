@@ -109,8 +109,9 @@
 	        return $public_query_vars;
 	}
 	
-	// Redirect if 'category_redirect' is set
-	add_filter('request', 'no_category_base_request');
+	// Redirect if 'category_redirect' is set 
+	// comment and replace by new add_action('request', 'replaceRequest')
+// 	add_filter('request', 'no_category_base_request');
 	function no_category_base_request($query_vars) {
         //print_r($query_vars); // For Debugging
         if (isset($query_vars['category_redirect'])) {
@@ -253,6 +254,66 @@
     	return $vars;
     });
     
+
+    // Request to get the product page
+    add_action( 'request', 'replaceRequest', 11 );
+    function replaceRequest( $request )
+    {
+        global  $wp, $wpdb ;
+        if ( checkIfWooCategoryExists( $request ) ) {
+            return $request;
+        }
+        $url = $wp->request;
+        
+        if ( !empty($url) ) {
+            $url = explode( '/', $url );
+            $slug = array_pop( $url );
+            $replace = [];
+            
+            if ( $slug === 'feed' ) {
+                $replace['feed'] = $slug;
+                $slug = array_pop( $url );
+            }
+            
+            
+            if ( $slug === 'amp' ) {
+                $replace['amp'] = $slug;
+                $slug = array_pop( $url );
+            }
+            
+            $commentsPosition = strpos( $slug, 'comment-page-' );
+            
+            if ( $commentsPosition === 0 ) {
+                $replace['cpage'] = substr( $slug, strlen( 'comment-page-' ) );
+                $slug = array_pop( $url );
+            }
+            
+            $sql = "SELECT COUNT(ID) as count_id FROM {$wpdb->posts} WHERE post_name = %s AND post_type = %s";
+            $query = $wpdb->prepare( $sql, [ $slug, 'product' ] );
+            $num = intval( $wpdb->get_var( $query ) );
+            
+            if ( $num > 0 ) {
+                $replace['page'] = '';
+                $replace['post_type'] = 'product';
+                $replace['product'] = $slug;
+                $replace['name'] = $slug;
+                return $replace;
+            }
+        
+        }
+        
+        return $request;
+    }
+    
+    function checkIfWooCategoryExists( $request )
+    {
+        if ( !empty('category') && in_array( 'product', [ 'category_slug', 'hierarchical' ] ) ) {
+            if ( array_key_exists( 'product_cat', $request ) ) {
+                return true;
+            }
+        }
+        return false;
+    }
 
 
 ?>
